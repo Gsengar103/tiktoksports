@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AgeBand {
+  AGE_13_15
+  AGE_16_17
+  AGE_18_PLUS
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum StaffRole {
+  USER
+  MODERATOR
+  SUPER_ADMIN
+}
+
+enum Goal {
+  WATCH
+  LEARN
+  PLAY_MORE
+}
+
+enum SportRelation {
+  FOLLOWS
+  PLAYS
+}
+
+enum VideoStatus {
+  DRAFT
+  UPLOADING
+  UPLOADED
+  CHECKING
+  LIVE
+  HELD
+  REJECTED
+  REMOVED
+}
+
+enum AssetRole {
+  THUMB_SM
+  THUMB_LG
+  PREVIEW
+  PLAYLIST
+  PROGRESSIVE
+  SEGMENT
+}
+
+enum CaseStatus {
+  OPEN
+  RESOLVED
+}
+
+enum CaseAction {
+  APPROVE
+  REMOVE
+  HOLD
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  displayName   String
+  dateOfBirth   DateTime
+  ageBand       AgeBand
+  role          StaffRole      @default(USER)
+  status        AccountStatus  @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       Profile?
+  videos        Video[]
+  refreshTokens RefreshToken[]
+  likes         Like[]
+  saves         Save[]
+  comments      Comment[]
+  following     Follow[]       @relation("following")
+  followers     Follow[]       @relation("followers")
+  reports       Report[]
+  blocksMade    Block[]        @relation("blocker")
+  blocksGot     Block[]        @relation("blocked")
+  decisions     ModerationCase[] @relation("reviewer")
+  audits        AuditEntry[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Profile {
+  userId      String         @id
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city        String?
+  cityVisible Boolean        @default(false)
+  goal        Goal           @default(WATCH)
+  sports      ProfileSport[]
+}
+
+model Sport {
+  id       String         @id
+  name     String
+  family   String
+  profiles ProfileSport[]
+  videos   Video[]
+}
+
+model ContentType {
+  id     String  @id
+  name   String
+  videos Video[]
+}
+
+model Level {
+  id     String  @id
+  name   String
+  videos Video[]
+}
+
+model ProfileSport {
+  id        String         @id @default(cuid())
+  profileId String
+  profile   Profile        @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+  sportId   String
+  sport     Sport          @relation(fields: [sportId], references: [id])
+  relation  SportRelation
+  levelId   String?
+
+  @@unique([profileId, sportId, relation])
+}
+
+model Video {
+  id            String           @id @default(cuid())
+  creatorId     String
+  creator       User             @relation(fields: [creatorId], references: [id])
+  caption       String           @default("")
+  durationMs    Int              @default(0)
+  status        VideoStatus      @default(DRAFT)
+  sportId       String
+  sport         Sport            @relation(fields: [sportId], references: [id])
+  contentTypeId String
+  contentType   ContentType      @relation(fields: [contentTypeId], references: [id])
+  levelId       String
+  level         Level            @relation(fields: [levelId], references: [id])
+  ingestHint    String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  assets        MediaAsset[]
+  counter       VideoCounter?
+  likes         Like[]
+  saves         Save[]
+  comments      Comment[]
+  reports       Report[]
+  cases         ModerationCase[]
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  videoId     String
+  video       Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  role        AssetRole
+  objectKey   String
+  etag        String?
+  contentType String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([videoId, objectKey])
+}
+
+model VideoCounter {
+  videoId  String @id
+  video    Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  likes    Int    @default(0)
+  saves    Int    @default(0)
+  comments Int    @default(0)
+}
+
+model Like {
+  userId    String
+  videoId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, videoId])
+}
+
+model Save {
+  userId    String
+  videoId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, videoId])
+}
+
+model Follow {
+  followerId String
+  followeeId String
+  follower   User     @relation("following", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   User     @relation("followers", fields: [followeeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([followerId, followeeId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id             String          @id @default(cuid())
+  reporterId     String
+  reporter       User            @relation(fields: [reporterId], references: [id])
+  videoId        String?
+  video          Video?          @relation(fields: [videoId], references: [id])
+  reason         String
+  caseId         String?
+  moderationCase ModerationCase? @relation(fields: [caseId], references: [id])
+  createdAt      DateTime        @default(now())
+}
+
+model Block {
+  blockerId String
+  blockedId String
+  blocker   User     @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([blockerId, blockedId])
+}
+
+model ModerationCase {
+  id         String      @id @default(cuid())
+  videoId    String
+  video      Video       @relation(fields: [videoId], references: [id])
+  status     CaseStatus  @default(OPEN)
+  reason     String
+  reviewerId String?
+  reviewer   User?       @relation("reviewer", fields: [reviewerId], references: [id])
+  decision   CaseAction?
+  reports    Report[]
+  createdAt  DateTime    @default(now())
+  resolvedAt DateTime?
+}
+
+model AuditEntry {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  action    String
+  targetId  String
+  reason    String
+  createdAt DateTime @default(now())
+}
