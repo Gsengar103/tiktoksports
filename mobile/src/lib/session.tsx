@@ -1,6 +1,6 @@
-import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, Me, Profile, SessionUser } from "./api";
+import { deleteItem, getItem, setItem } from "./token-store";
 
 const ACCESS = "sports.accessToken";
 const REFRESH = "sports.refreshToken";
@@ -23,8 +23,8 @@ type Session = {
 const SessionContext = createContext<Session | null>(null);
 
 async function persist(accessToken: string, refreshToken: string) {
-  await SecureStore.setItemAsync(ACCESS, accessToken);
-  await SecureStore.setItemAsync(REFRESH, refreshToken);
+  await setItem(ACCESS, accessToken);
+  await setItem(REFRESH, refreshToken);
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -41,7 +41,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const stored = await SecureStore.getItemAsync(ACCESS);
+      const stored = await getItem(ACCESS);
       if (!stored) {
         if (!cancelled) setReady(true);
         return;
@@ -49,8 +49,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       try {
         if (!cancelled) await loadMe(stored);
       } catch {
-        await SecureStore.deleteItemAsync(ACCESS);
-        await SecureStore.deleteItemAsync(REFRESH);
+        await deleteItem(ACCESS);
+        await deleteItem(REFRESH);
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -94,8 +94,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (token) await loadMe(token);
       },
       signOut: async () => {
-        await SecureStore.deleteItemAsync(ACCESS);
-        await SecureStore.deleteItemAsync(REFRESH);
+        await deleteItem(ACCESS);
+        await deleteItem(REFRESH);
         setToken(null);
         setMe(null);
       },

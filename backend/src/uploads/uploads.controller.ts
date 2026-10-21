@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Inject, NotFoundException, Param, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Inject, Logger, NotFoundException, Param, Post, UseGuards } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectQueue } from "@nestjs/bullmq";
 import { AssetRole, VideoStatus } from "@prisma/client";
@@ -16,6 +16,8 @@ import { INGEST_QUEUE } from "../ingest/ingest.constants";
 @Controller("v1/videos")
 @UseGuards(JwtAuthGuard)
 export class UploadsController {
+  private readonly logger = new Logger(UploadsController.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
@@ -54,6 +56,7 @@ export class UploadsController {
       });
     }
     await this.prisma.video.update({ where: { id }, data: { status: VideoStatus.UPLOADING } });
+    this.logger.log(`Issued ${created.length} upload URLs for ${id}: ${created.map((asset) => asset.role).join(", ")}`);
     return { assets: created };
   }
 
@@ -85,8 +88,19 @@ export class UploadsController {
         where: { id },
       }),
     ]);
-    await this.queue.add("check", { videoId: id }, { jobId: id, removeOnComplete: true, attempts: 3 });
-    return { id, status: VideoStatus.UPLOADED };
+    let queued = true;
+    try {
+      await Promise.race([
+        this.queue.add("check", { videoId: id }, { jobId: id, removeOnComplete: true, attempts: 3 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Job queue did not answer within 5s")), 5_000)),
+      ]);
+      this.logger.log(`Video ${id} uploaded and queued for checks`);
+    } catch (error) {
+      queued = false;
+      const message = error instanceof Error ? error.message : "unknown queue error";
+      this.logger.warn(`Video ${id} is saved as UPLOADED, but the check was not queued: ${message}`);
+    }
+    return { id, status: VideoStatus.UPLOADED, queued };
   }
 
   private async owned(userId: string, id: string) {

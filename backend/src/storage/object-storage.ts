@@ -11,14 +11,28 @@ export interface ObjectStorage {
   presignGet(key: string): Promise<string>;
 }
 
+type StoredObject = { body: Buffer; contentType: string };
+
+const memoryObjects = new Map<string, StoredObject>();
+
+export function saveMemoryObject(key: string, body: Buffer, contentType: string): void {
+  memoryObjects.set(key, { body, contentType });
+}
+
+export function readMemoryObject(key: string): StoredObject | undefined {
+  return memoryObjects.get(key);
+}
+
 @Injectable()
 export class MemoryObjectStorage implements ObjectStorage {
+  constructor(private readonly origin: string) {}
+
   presignPut(key: string): Promise<string> {
-    return Promise.resolve(`memory://put/${encodeURIComponent(key)}`);
+    return Promise.resolve(`${this.origin}/dev/objects?key=${encodeURIComponent(key)}`);
   }
 
   presignGet(key: string): Promise<string> {
-    return Promise.resolve(`memory://get/${encodeURIComponent(key)}`);
+    return Promise.resolve(`${this.origin}/dev/objects?key=${encodeURIComponent(key)}`);
   }
 }
 

@@ -63,6 +63,19 @@ export class EngagementController {
     return { id: comment.id };
   }
 
+  @Post("videos/:id/views")
+  async view(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    const video = await this.liveVideo(id);
+    if (video.creatorId === user.id) return { counted: false };
+    const day = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    await this.prisma.videoViewDaily.upsert({
+      where: { videoId_day_ageBand: { videoId: id, day, ageBand: user.ageBand } },
+      create: { videoId: id, day, ageBand: user.ageBand, views: 1 },
+      update: { views: { increment: 1 } },
+    });
+    return { counted: true, ageBand: user.ageBand };
+  }
+
   @Post("users/:id/follows")
   async follow(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     if (id === user.id) throw new BadRequestException("You cannot follow yourself");

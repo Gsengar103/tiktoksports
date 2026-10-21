@@ -1,5 +1,5 @@
 import { AssetRole, VideoStatus } from "@prisma/client";
-import { IsArray, IsEnum, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsEnum, IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CreateVideoDto {
@@ -18,7 +18,6 @@ export class CreateVideoDto {
 
   @IsInt()
   @Min(1)
-  @Max(60_000)
   durationMs!: number;
 }
 
@@ -58,7 +57,6 @@ export class CompleteUploadDto {
 
   @IsInt()
   @Min(1)
-  @Max(60_000)
   durationMs!: number;
 
   @IsOptional()
@@ -83,7 +81,7 @@ export const REQUIRED_ONE_OF: AssetRole[][] = [
 ];
 
 export function packageProblems(roles: AssetRole[], durationMs: number): string | null {
-  if (durationMs < 1 || durationMs > 60_000) return "Duration must be between 1 ms and 60 seconds";
+  if (durationMs < 1) return "Duration must be at least 1 ms";
   for (const group of REQUIRED_ONE_OF) {
     if (!group.some((role) => roles.includes(role))) return `Package is missing ${group.join(" or ")}`;
   }

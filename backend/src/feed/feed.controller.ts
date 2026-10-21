@@ -28,18 +28,37 @@ export class FeedController {
     });
     const sportIds = profile?.sports.filter((sport) => sport.relation === SportRelation.FOLLOWS).map((sport) => sport.sportId) ?? [];
     const blocks = await this.prisma.block.findMany({ where: { blockerId: user.id } });
-    const videos = await this.prisma.video.findMany({
-      where: {
-        status: VideoStatus.LIVE,
-        creatorId: { notIn: blocks.map((block) => block.blockedId) },
-        ...(sportIds.length > 0 ? { sportId: { in: sportIds } } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: query.limit ?? 20,
-      include: { counter: true, creator: { select: { id: true, displayName: true } } },
-    });
+    const blockedIds = blocks.map((block) => block.blockedId);
+    const take = query.limit ?? 20;
+    const include = { counter: true, creator: { select: { id: true, displayName: true } } } as const;
+    const live = {
+      status: VideoStatus.LIVE,
+      ...(blockedIds.length > 0 ? { creatorId: { notIn: blockedIds } } : {}),
+    };
+    const followed =
+      sportIds.length > 0
+        ? await this.prisma.video.findMany({
+            where: { ...live, sportId: { in: sportIds } },
+            orderBy: { createdAt: "desc" },
+            take,
+            include,
+          })
+        : [];
+    const more =
+      followed.length < take
+        ? await this.prisma.video.findMany({
+            where: {
+              ...live,
+              ...(followed.length > 0 ? { id: { notIn: followed.map((video) => video.id) } } : {}),
+            },
+            orderBy: { createdAt: "desc" },
+            take: take - followed.length,
+            include,
+          })
+        : [];
+    const videos = [...followed, ...more];
     return {
-      reason: sportIds.length > 0 ? "followed-sports" : "latest-live",
+      reason: followed.length > 0 ? "followed-sports" : "latest-live",
       videos: videos.map((video) => ({
         id: video.id,
         caption: video.caption,

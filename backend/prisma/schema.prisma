@@ -166,6 +166,7 @@ model Video {
   comments      Comment[]
   reports       Report[]
   cases         ModerationCase[]
+  viewDays      VideoViewDaily[]
 }
 
 model MediaAsset {
@@ -187,6 +188,16 @@ model VideoCounter {
   likes    Int    @default(0)
   saves    Int    @default(0)
   comments Int    @default(0)
+}
+
+model VideoViewDaily {
+  videoId String
+  day     DateTime @db.Date
+  ageBand AgeBand
+  views   Int      @default(0)
+  video   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, day, ageBand])
 }
 
 model Like {

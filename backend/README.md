@@ -17,9 +17,21 @@ npm run start:dev
 
 Set `SEED_PASSWORD` before `npm run seed` to create `adult@dev.local`, `teen@dev.local`, and `admin@dev.local`.
 
-`STORAGE=memory` skips S3 and returns `memory://` URLs. Use that for automated tests. Use MinIO (`STORAGE=s3` in `.env.example`) when a phone must upload real bytes. Point `S3_PUBLIC_ENDPOINT` at a host the phone can reach. `localhost` only works for curl on this machine.
+`STORAGE=memory` stores uploaded bytes in the API process and serves them at `/dev/objects`. `STORAGE=s3` uses MinIO or any S3 API. Local MinIO keeps objects on disk under `backend/data/minio` (the `media` bucket). Point the same `S3_ENDPOINT`, `S3_BUCKET`, and keys at Amazon S3 later; the object keys do not change. `S3_PUBLIC_ENDPOINT` must be a host the phone or browser can reach. `localhost` only works on this machine.
 
 A caption containing `hold-me`, or `fixture: "mismatch"` on complete (not in production), keeps the video held and out of the feed.
+
+## Admin console
+
+The review UI lives in `admin/`. It signs in with `POST /admin/auth/login` and works the open case queue.
+
+```bash
+cd admin
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 and sign in as `admin@dev.local` with the seeded password. Approve makes a held video live. Remove takes it down. Keep held leaves the case open.
 
 ## Checks
 

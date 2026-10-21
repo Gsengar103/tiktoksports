@@ -8,8 +8,13 @@ describe("packageProblems", () => {
     expect(packageProblems(roles, 10_000)).toBeNull();
   });
 
-  it("rejects a package over 60 seconds or missing a preview", () => {
-    expect(packageProblems(roles, 60_001)).toMatch(/60 seconds/);
+  it("accepts any positive duration, including longer than 60 seconds", () => {
+    expect(packageProblems(roles, 60_001)).toBeNull();
+    expect(packageProblems(roles, 3_600_000)).toBeNull();
+  });
+
+  it("rejects a non-positive duration or a package missing a preview", () => {
+    expect(packageProblems(roles, 0)).toMatch(/at least 1 ms/);
     expect(packageProblems([AssetRole.THUMB_SM, AssetRole.THUMB_LG, AssetRole.PLAYLIST], 1000)).toMatch(/PREVIEW/);
   });
 });

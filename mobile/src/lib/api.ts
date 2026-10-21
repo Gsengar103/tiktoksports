@@ -22,20 +22,32 @@ function errorMessage(body: string, status: number): string {
 
 export async function api<T>(
   path: string,
-  options: { method?: string; body?: unknown; token?: string | null } = {},
+  options: { method?: string; body?: unknown; token?: string | null; timeoutMs?: number } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.token) headers.Authorization = `Bearer ${options.token}`;
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
-  if (response.status === 204) return undefined as T;
-  const text = await response.text();
-  if (!response.ok) throw new ApiError(errorMessage(text, response.status), response.status);
-  return (text ? JSON.parse(text) : undefined) as T;
+  const controller = new AbortController();
+  const timer = options.timeoutMs ? setTimeout(() => controller.abort(), options.timeoutMs) : undefined;
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+    if (response.status === 204) return undefined as T;
+    const text = await response.text();
+    if (!response.ok) throw new ApiError(errorMessage(text, response.status), response.status);
+    return (text ? JSON.parse(text) : undefined) as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError(`No answer from ${path} within ${options.timeoutMs}ms`, 0);
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export type SessionUser = {

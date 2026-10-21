@@ -4,8 +4,8 @@ import { VideoStatus } from "@prisma/client";
 const ALLOWED: Record<VideoStatus, VideoStatus[]> = {
   DRAFT: [VideoStatus.UPLOADING],
   UPLOADING: [VideoStatus.UPLOADED],
-  UPLOADED: [VideoStatus.CHECKING],
-  CHECKING: [VideoStatus.LIVE, VideoStatus.HELD, VideoStatus.REJECTED],
+  UPLOADED: [VideoStatus.CHECKING, VideoStatus.LIVE, VideoStatus.HELD, VideoStatus.REMOVED],
+  CHECKING: [VideoStatus.LIVE, VideoStatus.HELD, VideoStatus.REJECTED, VideoStatus.REMOVED],
   HELD: [VideoStatus.LIVE, VideoStatus.REMOVED],
   LIVE: [VideoStatus.REMOVED, VideoStatus.HELD],
   REJECTED: [VideoStatus.REMOVED],
