@@ -1,8 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useState } from "react";
 import { Dimensions, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, FeedVideo, PublicVideo } from "../lib/api";
+import { useSession } from "../lib/session";
+import { FollowButton } from "./follow";
 import { Reactions } from "./reactions";
 import { usePlayedDuration, useWatchReport } from "../lib/watch-report";
 import { colors } from "./ui";
@@ -16,8 +19,19 @@ export function WatchSession({
   token: string | null;
   onClose: () => void;
 }) {
+  const { me } = useSession();
+  const [items, setItems] = useState(videos);
   const [active, setActive] = useState(0);
   const [pageHeight, setPageHeight] = useState(Dimensions.get("window").height);
+
+  useEffect(() => {
+    setItems(videos);
+    setActive(0);
+  }, [videos]);
+
+  function onFollow(creatorId: string, following: boolean) {
+    setItems((current) => current.map((video) => (video.creator.id === creatorId ? { ...video, following } : video)));
+  }
 
   return (
     <View
@@ -28,7 +42,7 @@ export function WatchSession({
       }}
     >
       <FlatList
-        data={videos}
+        data={items}
         extraData={active}
         keyExtractor={(item) => item.id}
         pagingEnabled
@@ -43,13 +57,21 @@ export function WatchSession({
           if (next > 0 && next !== pageHeight) setPageHeight(next);
         }}
         onScroll={(event) => {
-          const next = pageIndex(event.nativeEvent.contentOffset.y, pageHeight, videos.length);
+          const next = pageIndex(event.nativeEvent.contentOffset.y, pageHeight, items.length);
           setActive((current) => (current === next ? current : next));
         }}
-        onMomentumScrollEnd={(event) => setActive(pageIndex(event.nativeEvent.contentOffset.y, pageHeight, videos.length))}
+        onMomentumScrollEnd={(event) => setActive(pageIndex(event.nativeEvent.contentOffset.y, pageHeight, items.length))}
         scrollEventThrottle={16}
         renderItem={({ item, index }) => (
-          <WatchPage item={item} active={index === active} height={pageHeight} token={token} more={index < videos.length - 1} />
+          <WatchPage
+            item={item}
+            active={index === active}
+            height={pageHeight}
+            token={token}
+            viewerId={me?.id ?? null}
+            more={index < items.length - 1}
+            onFollow={onFollow}
+          />
         )}
         style={styles.fill}
       />
@@ -65,13 +87,17 @@ function WatchPage({
   active,
   height,
   token,
+  viewerId,
   more,
+  onFollow,
 }: {
   item: FeedVideo;
   active: boolean;
   height: number;
   token: string | null;
+  viewerId: string | null;
   more: boolean;
+  onFollow: (creatorId: string, following: boolean) => void;
 }) {
   const [playback, setPlayback] = useState<string | null>(null);
   const reportDuration = useWatchReport(item.id, token, active);
@@ -98,7 +124,16 @@ function WatchPage({
         <View style={[styles.page, { height }]}>
           {active && playback ? <Player url={playback} onWatch={reportDuration} /> : <View style={styles.poster} />}
           <View style={styles.meta}>
-            <Text style={styles.creator}>{item.creator.displayName}</Text>
+            <View style={styles.creatorRow}>
+              <Text style={styles.creator}>{item.creator.displayName}</Text>
+              <FollowButton
+                creatorId={item.creator.id}
+                viewerId={viewerId}
+                following={item.following === true}
+                token={token}
+                onChange={onFollow}
+              />
+            </View>
             <Text style={styles.caption}>{item.caption || "Untitled"}</Text>
             <Text style={styles.tags}>
               {item.sportId.replace("sport.", "")} · {item.levelId.replace("level.", "")}
@@ -165,16 +200,19 @@ function Player({ url, onWatch }: { url: string; onWatch: (durationMs: number) =
           <Text style={styles.failedText}>This video file could not be played.</Text>
         </View>
       ) : null}
-      {!failed && !audible ? (
+      {!failed ? (
         <Pressable
           onPress={() => {
-            player.muted = false;
-            player.play();
-            setAudible(true);
+            const next = !audible;
+            player.muted = !next;
+            if (next) player.play();
+            setAudible(next);
           }}
           style={styles.sound}
+          accessibilityRole="button"
+          accessibilityLabel={audible ? "Mute sound" : "Turn sound on"}
         >
-          <Text style={styles.soundText}>Sound</Text>
+          <Ionicons name={audible ? "volume-high" : "volume-mute"} size={22} color={colors.text} pointerEvents="none" />
         </Pressable>
       ) : null}
     </View>
@@ -214,27 +252,29 @@ const styles = StyleSheet.create({
   sound: {
     position: "absolute",
     right: 16,
-    bottom: 108,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    bottom: 176,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(12,12,12,0.55)",
+    borderRadius: 22,
   },
-  soundText: { color: colors.text, fontWeight: "700" },
   back: {
     position: "absolute",
     top: 52,
     left: 16,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(12,12,12,0.55)",
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  backText: { color: colors.text, fontWeight: "700" },
-  meta: { position: "absolute", left: 16, right: 88, bottom: 24, gap: 6 },
-  creator: { color: colors.text, fontWeight: "700", fontSize: 16 },
-  caption: { color: colors.text, fontSize: 15 },
-  tags: { color: colors.muted, fontSize: 13 },
+  backText: { color: colors.text, fontWeight: "800" },
+  meta: { position: "absolute", left: 16, right: 88, bottom: 96, gap: 6 },
+  creatorRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  creator: { color: colors.text, fontWeight: "800", fontSize: 17, flexShrink: 1 },
+  caption: { color: colors.text, fontSize: 15, lineHeight: 20 },
+  tags: { color: colors.accent, fontSize: 13, fontWeight: "700" },
   commentRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   commentInput: {
     flex: 1,

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, Profile, ProfileInput, ProfileKind, ProfilePhotoRole, Taxonomy } from "../lib/api";
 import { putFile } from "../lib/put-file";
-import { Button, colors, ErrorText, Field } from "./ui";
+import { Button, Chip, colors, ErrorText, Field } from "./ui";
 
 const KINDS: { id: ProfileKind; label: string }[] = [
   { id: "PLAYER", label: "Player" },
@@ -388,14 +388,6 @@ function SinglePhoto({
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.choice, active && styles.choiceOn]}>
-      <Text style={[styles.choiceText, active && styles.choiceTextOn]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 function toggle(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
@@ -409,13 +401,9 @@ function numberOrUndefined(value: string): number | undefined {
 
 const styles = StyleSheet.create({
   form: { gap: 12 },
-  heading: { color: colors.text, fontSize: 16, fontWeight: "600", marginTop: 8 },
+  heading: { color: colors.text, fontSize: 18, fontWeight: "800", marginTop: 10, letterSpacing: -0.3 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  choice: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  choiceOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  choiceText: { color: colors.text },
-  choiceTextOn: { color: "#111", fontWeight: "700" },
-  note: { color: colors.muted, fontSize: 13 },
-  thumb: { width: 88, height: 88, borderRadius: 10, backgroundColor: "#111" },
-  cover: { width: "100%", height: 140, borderRadius: 12, backgroundColor: "#111" },
+  note: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  thumb: { width: 96, height: 96, borderRadius: 16, backgroundColor: "#101010" },
+  cover: { width: "100%", height: 160, borderRadius: 20, backgroundColor: "#101010" },
 });

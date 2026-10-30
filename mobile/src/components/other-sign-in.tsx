@@ -250,17 +250,17 @@ function ContinueButton({ label, onPress, disabled }: { label: string; onPress: 
 
 const styles = StyleSheet.create({
   block: { gap: 14 },
-  or: { color: colors.muted, textAlign: "center", fontSize: 13 },
-  note: { color: colors.muted, fontSize: 14 },
-  back: { color: colors.accent, textAlign: "center", fontSize: 15 },
+  or: { color: colors.muted, textAlign: "center", fontSize: 12, fontWeight: "700", letterSpacing: 1.2 },
+  note: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  back: { color: colors.accent, textAlign: "center", fontSize: 15, fontWeight: "700" },
   alt: {
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 999,
+    paddingVertical: 15,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.line,
-    backgroundColor: colors.card,
+    backgroundColor: "#101010",
   },
-  disabled: { opacity: 0.5 },
+  disabled: { opacity: 0.45 },
   altText: { color: colors.text, fontWeight: "700", fontSize: 16 },
 });

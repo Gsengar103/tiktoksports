@@ -1,8 +1,8 @@
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { OtherSignIn } from "../src/components/other-sign-in";
-import { Button, colors, ErrorText, Field } from "../src/components/ui";
+import { Button, colors, ErrorText, Field, ScreenTitle } from "../src/components/ui";
 import { useSession } from "../src/lib/session";
 
 export default function LoginScreen() {
@@ -27,8 +27,7 @@ export default function LoginScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Sports</Text>
-      <Text style={styles.subtitle}>Short videos for the sport you actually play.</Text>
+      <ScreenTitle kicker="YOUR SPORT. YOUR CLIP." title="Sports" subtitle="Short videos for the game you actually play." />
       <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@email.com" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
       <ErrorText message={error} />
@@ -42,8 +41,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
-  title: { color: colors.text, fontSize: 32, fontWeight: "700" },
-  subtitle: { color: colors.muted, fontSize: 16, marginBottom: 8 },
-  link: { color: colors.accent, textAlign: "center", fontSize: 15 },
+  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 72, justifyContent: "center", gap: 16 },
+  link: { color: colors.accent, textAlign: "center", fontSize: 15, fontWeight: "700" },
 });

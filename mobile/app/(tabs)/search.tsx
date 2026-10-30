@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { WatchSession } from "../../src/components/watch";
-import { Button, colors, ErrorText, Field } from "../../src/components/ui";
+import { Button, Chip, colors, ErrorText, Field, ScreenTitle } from "../../src/components/ui";
 import { api, FeedVideo, Taxonomy } from "../../src/lib/api";
 import { useSession } from "../../src/lib/session";
 
@@ -58,10 +58,10 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Search</Text>
+      <ScreenTitle kicker="FIND A CLIP" title="Search" />
       <Field label="Keyword" value={query} onChangeText={setQuery} placeholder="footwork, drill, match" />
       <View style={styles.wrap}>
-        <Chip label="All sports" active={sportId === null} onPress={() => setSportId(null)} />
+        <Chip label="All" active={sportId === null} onPress={() => setSportId(null)} />
         {taxonomy?.sports.map((sport) => (
           <Chip key={sport.id} label={sport.name} active={sport.id === sportId} onPress={() => setSportId(sport.id)} />
         ))}
@@ -75,6 +75,7 @@ export default function SearchScreen() {
         ListEmptyComponent={<Text style={styles.empty}>Live videos that match will show here. Tap one to play it.</Text>}
         renderItem={({ item }) => (
           <Pressable onPress={() => void open(item)} style={styles.row} disabled={opening === item.id}>
+            <ResultThumb url={item.thumbUrl ?? null} sport={sportName(item.sportId)} />
             <View style={styles.rowBody}>
               <Text style={styles.caption}>{item.caption || "Untitled"}</Text>
               <Text style={styles.meta}>
@@ -89,34 +90,43 @@ export default function SearchScreen() {
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function ResultThumb({ url, sport }: { url: string | null; sport: string }) {
+  const [failed, setFailed] = useState(false);
+  if (url && !failed) return <Image source={{ uri: url }} style={styles.thumb} onError={() => setFailed(true)} />;
+  const initial = sport.trim().charAt(0).toUpperCase() || "•";
   return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipOn]}>
-      <Text style={[styles.chipText, active && styles.chipTextOn]}>{label}</Text>
-    </Pressable>
+    <View style={styles.placeholder}>
+      <Text style={styles.initial}>{initial}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: 20, paddingTop: 64, gap: 12 },
-  title: { color: colors.text, fontSize: 28, fontWeight: "700" },
+  screen: { flex: 1, backgroundColor: colors.bg, padding: 20, paddingTop: 64, paddingBottom: 96, gap: 14 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { color: colors.text },
-  chipTextOn: { color: "#111", fontWeight: "700" },
   list: { flex: 1 },
-  empty: { color: colors.muted, marginTop: 12 },
+  empty: { color: colors.muted, marginTop: 12, lineHeight: 20 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
+    padding: 14,
+    marginBottom: 8,
+    backgroundColor: colors.card,
+    borderRadius: 18,
   },
+  thumb: { width: 72, height: 96, borderRadius: 14, backgroundColor: "#101010" },
+  placeholder: {
+    width: 72,
+    height: 96,
+    borderRadius: 14,
+    backgroundColor: "#101010",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  initial: { color: colors.accent, fontSize: 22, fontWeight: "800" },
   rowBody: { flex: 1, gap: 4 },
-  caption: { color: colors.text, fontSize: 16 },
+  caption: { color: colors.text, fontSize: 16, fontWeight: "700" },
   meta: { color: colors.muted, fontSize: 13 },
-  play: { color: "#111", backgroundColor: colors.accent, fontWeight: "700", borderRadius: 999, overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
+  play: { color: colors.ink, backgroundColor: colors.accent, fontWeight: "800", borderRadius: 999, overflow: "hidden", paddingHorizontal: 14, paddingVertical: 8 },
 });

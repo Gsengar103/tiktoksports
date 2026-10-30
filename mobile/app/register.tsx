@@ -1,8 +1,8 @@
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { OtherSignIn } from "../src/components/other-sign-in";
-import { Button, colors, ErrorText, Field } from "../src/components/ui";
+import { Button, colors, ErrorText, Field, ScreenTitle } from "../src/components/ui";
 import { useSession } from "../src/lib/session";
 
 export default function RegisterScreen() {
@@ -34,8 +34,7 @@ export default function RegisterScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Create account</Text>
-      <Text style={styles.subtitle}>You need to be 13 or older. Use YYYY-MM-DD for the date of birth.</Text>
+      <ScreenTitle kicker="JOIN THE GAME" title="Create account" subtitle="You need to be 13 or older. Date of birth uses YYYY-MM-DD." />
       <Field label="Name" value={displayName} onChangeText={setDisplayName} autoCapitalize="words" />
       <Field label="Email" value={email} onChangeText={setEmail} />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
@@ -51,8 +50,6 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
-  title: { color: colors.text, fontSize: 28, fontWeight: "700" },
-  subtitle: { color: colors.muted, fontSize: 15 },
-  link: { color: colors.accent, textAlign: "center", fontSize: 15 },
+  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 72, justifyContent: "center", gap: 16 },
+  link: { color: colors.accent, textAlign: "center", fontSize: 15, fontWeight: "700" },
 });

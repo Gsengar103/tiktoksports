@@ -1,13 +1,14 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export const colors = {
-  bg: "#0c0c0c",
-  card: "#171717",
+  bg: "#050505",
+  card: "#141414",
   line: "#2a2a2a",
-  text: "#f5f5f5",
-  muted: "#9a9a9a",
-  accent: "#d6ff4a",
-  danger: "#ff6b6b",
+  text: "#f6f6f4",
+  muted: "#8e8e8e",
+  accent: "#d6ff3e",
+  ink: "#111111",
+  danger: "#ff5d73",
 };
 
 export function Field({
@@ -66,26 +67,59 @@ export function ErrorText({ message }: { message: string | null }) {
   return <Text style={styles.error}>{message}</Text>;
 }
 
+export function ScreenTitle({ kicker, title, subtitle }: { kicker?: string; title: string; subtitle?: string }) {
+  return (
+    <View style={styles.titleBlock}>
+      {kicker ? <Text style={styles.kicker}>{kicker}</Text> : null}
+      <Text style={styles.screenTitle}>{title}</Text>
+      {subtitle ? <Text style={styles.screenSubtitle}>{subtitle}</Text> : null}
+    </View>
+  );
+}
+
+export function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipOn]}>
+      <Text style={[styles.chipText, active && styles.chipTextOn]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   field: { gap: 6 },
-  label: { color: colors.muted, fontSize: 13 },
+  label: { color: colors.muted, fontSize: 12, fontWeight: "600", letterSpacing: 0.4 },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: "#101010",
     color: colors.text,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
   },
   button: {
     backgroundColor: colors.accent,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 999,
+    paddingVertical: 16,
     alignItems: "center",
   },
-  disabled: { opacity: 0.5 },
-  buttonText: { color: "#111", fontWeight: "700", fontSize: 16 },
+  disabled: { opacity: 0.45 },
+  buttonText: { color: colors.ink, fontWeight: "800", fontSize: 16, letterSpacing: 0.2 },
   error: { color: colors.danger, fontSize: 14 },
+  titleBlock: { gap: 6 },
+  kicker: { color: colors.accent, fontSize: 12, fontWeight: "800", letterSpacing: 1.4 },
+  screenTitle: { color: colors.text, fontSize: 34, fontWeight: "800", letterSpacing: -0.8 },
+  screenSubtitle: { color: colors.muted, fontSize: 15, lineHeight: 21 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: "#101010",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  chipText: { color: colors.text, fontWeight: "600" },
+  chipTextOn: { color: colors.ink, fontWeight: "800" },
 });

@@ -211,8 +211,10 @@ export type FeedVideo = {
   contentTypeId: string;
   levelId: string;
   creator: { id: string; displayName: string };
+  following?: boolean;
   liked?: boolean;
   counts: { likes: number; saves: number; comments: number } | null;
+  thumbUrl?: string | null;
 };
 
 export type PublicVideo = {

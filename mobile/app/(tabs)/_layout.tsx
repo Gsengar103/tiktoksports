@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, ColorValue, Text, View } from "react-native";
 import { colors } from "../../src/components/ui";
 import { useSession } from "../../src/lib/session";
 
@@ -19,15 +19,30 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: "#111", borderTopColor: "#222" },
+        tabBarStyle: {
+          backgroundColor: "#101010",
+          borderTopWidth: 0,
+          height: 68,
+          paddingTop: 8,
+          paddingBottom: 10,
+          marginHorizontal: 16,
+          marginBottom: 12,
+          borderRadius: 24,
+          position: "absolute",
+        },
+        tabBarLabelStyle: { fontWeight: "700", fontSize: 11 },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
       }}
     >
-      <Tabs.Screen name="feed" options={{ title: "Feed" }} />
-      <Tabs.Screen name="search" options={{ title: "Search" }} />
-      <Tabs.Screen name="upload" options={{ title: "Upload" }} />
-      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen name="feed" options={{ title: "Feed", tabBarIcon: ({ color }) => <TabMark color={color} mark="▶" /> }} />
+      <Tabs.Screen name="search" options={{ title: "Search", tabBarIcon: ({ color }) => <TabMark color={color} mark="⌕" /> }} />
+      <Tabs.Screen name="upload" options={{ title: "Post", tabBarIcon: ({ color }) => <TabMark color={color} mark="+" /> }} />
+      <Tabs.Screen name="profile" options={{ title: "You", tabBarIcon: ({ color }) => <TabMark color={color} mark="●" /> }} />
     </Tabs>
   );
+}
+
+function TabMark({ color, mark }: { color: ColorValue; mark: string }) {
+  return <Text style={{ color, fontSize: 16, fontWeight: "800", lineHeight: 18 }}>{mark}</Text>;
 }

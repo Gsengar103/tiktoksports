@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Button, colors, ErrorText, Field } from "../../src/components/ui";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Button, Chip, colors, ErrorText, Field, ScreenTitle } from "../../src/components/ui";
 import { api, Taxonomy } from "../../src/lib/api";
 import { putFile } from "../../src/lib/put-file";
 import { useSession } from "../../src/lib/session";
@@ -146,7 +146,7 @@ export default function UploadScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>Upload</Text>
+      <ScreenTitle kicker="DROP A CLIP" title="Post" subtitle="Pick an mp4. Each step shows up below." />
       <ScrollView style={styles.log} nestedScrollEnabled>
         {log.length === 0 ? <Text style={styles.logLine}>Choose an mp4. Each step is listed here.</Text> : null}
         {log.map((line, index) => (
@@ -187,23 +187,16 @@ function Choices({
   return (
     <View style={styles.wrap}>
       {items.map((item) => (
-        <Pressable key={item.id} onPress={() => onSelect(item.id)} style={[styles.chip, selected === item.id && styles.chipOn]}>
-          <Text style={[styles.chipText, selected === item.id && styles.chipTextOn]}>{item.name}</Text>
-        </Pressable>
+        <Chip key={item.id} label={item.name} active={selected === item.id} onPress={() => onSelect(item.id)} />
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.bg, padding: 20, paddingTop: 64, gap: 12 },
-  title: { color: colors.text, fontSize: 28, fontWeight: "700" },
-  log: { backgroundColor: colors.card, borderRadius: 10, padding: 12, gap: 6, maxHeight: 240 },
-  logLine: { color: colors.muted, fontSize: 13, fontFamily: "Menlo" },
-  heading: { color: colors.text, fontWeight: "600", marginTop: 6 },
+  screen: { backgroundColor: colors.bg, padding: 20, paddingTop: 64, paddingBottom: 110, gap: 14 },
+  log: { backgroundColor: colors.card, borderRadius: 18, padding: 14, gap: 6, maxHeight: 220 },
+  logLine: { color: colors.muted, fontSize: 13 },
+  heading: { color: colors.text, fontWeight: "800", marginTop: 6, letterSpacing: -0.2 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { color: colors.text },
-  chipTextOn: { color: "#111", fontWeight: "700" },
 });

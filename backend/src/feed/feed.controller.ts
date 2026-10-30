@@ -5,7 +5,7 @@ import { Type } from "class-transformer";
 import { AuthUser, CurrentUser } from "../auth/current-user";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { Interest, interestScore, loadInterest } from "../common/interest";
-import { NEXT_REACTION_SLOTS } from "../common/rank";
+import { FOLLOW_NEW_MS, FOLLOW_PRIORITY_CAP, NEXT_REACTION_SLOTS } from "../common/rank";
 import { PrismaService } from "../prisma/prisma.service";
 
 class FeedQuery {
@@ -38,6 +38,17 @@ export class FeedController {
       status: VideoStatus.LIVE,
       ...(blockedIds.length > 0 ? { creatorId: { notIn: blockedIds } } : {}),
     };
+    const follows = await this.prisma.follow.findMany({ where: { followerId: user.id }, select: { followeeId: true } });
+    const followeeIds = follows.map((row) => row.followeeId).filter((id) => !blockedIds.includes(id));
+    const fromPeople =
+      followeeIds.length > 0
+        ? await this.prisma.video.findMany({
+            where: { ...live, creatorId: { in: followeeIds }, createdAt: { gte: new Date(Date.now() - FOLLOW_NEW_MS) } },
+            orderBy: { createdAt: "desc" },
+            take: FOLLOW_PRIORITY_CAP,
+            include,
+          })
+        : [];
     const followed =
       sportIds.length > 0
         ? await this.prisma.video.findMany({
@@ -56,9 +67,13 @@ export class FeedController {
       take: poolSize,
       include,
     });
-    const opener = followed[0] ?? others[0];
     const interest = await loadInterest(this.prisma, user.id);
-    const videos = opener ? orderFeed(opener, followed, others, interest).slice(0, take) : [];
+    const priority = fromPeople.filter((video) => !interest.finished.has(video.id));
+    const priorityIds = new Set(priority.map((video) => video.id));
+    const sportPool = followed.filter((video) => !priorityIds.has(video.id));
+    const otherPool = others.filter((video) => !priorityIds.has(video.id));
+    const opener = priority[0] ?? sportPool[0] ?? otherPool[0];
+    const videos = opener ? orderFeed(opener, sportPool, otherPool, interest, priority.slice(1)).slice(0, take) : [];
     const liked = videos.length
       ? await this.prisma.like.findMany({
           where: { userId: user.id, videoId: { in: videos.map((video) => video.id) } },
@@ -66,8 +81,9 @@ export class FeedController {
         })
       : [];
     const likedIds = new Set(liked.map((row) => row.videoId));
+    const followedPeople = new Set(followeeIds);
     return {
-      reason: followed.length > 0 ? "followed-sports" : "latest-live",
+      reason: priority.length > 0 ? "followed-people" : followed.length > 0 ? "followed-sports" : "latest-live",
       videos: videos.map((video) => ({
         id: video.id,
         caption: video.caption,
@@ -75,6 +91,7 @@ export class FeedController {
         contentTypeId: video.contentTypeId,
         levelId: video.levelId,
         creator: video.creator,
+        following: followedPeople.has(video.creator.id),
         liked: likedIds.has(video.id),
         counts: {
           likes: video.counter?.likes ?? 0,
@@ -95,15 +112,16 @@ function orderFeed<
     levelId: string;
     counter: { likes: number; comments: number } | null;
   },
->(opener: T, followed: T[], others: T[], interest: Interest): T[] {
-  const rest = [...followed, ...others].filter((video) => video.id !== opener.id && !interest.finished.has(video.id));
+>(opener: T, followed: T[], others: T[], interest: Interest, lead: T[]): T[] {
+  const leadIds = new Set(lead.map((video) => video.id));
+  const rest = [...followed, ...others].filter((video) => video.id !== opener.id && !leadIds.has(video.id) && !interest.finished.has(video.id));
   const upcoming = [...rest].sort(
     (left, right) => interestScore(interest, right) - interestScore(interest, left) || right.createdAt.getTime() - left.createdAt.getTime(),
   );
   const next = upcoming.slice(0, NEXT_REACTION_SLOTS);
-  const used = new Set([opener.id, ...next.map((video) => video.id)]);
+  const used = new Set([opener.id, ...lead.map((video) => video.id), ...next.map((video) => video.id)]);
   const byNewest = (left: T, right: T) => right.createdAt.getTime() - left.createdAt.getTime();
   const restFollowed = followed.filter((video) => !used.has(video.id) && !interest.finished.has(video.id)).sort(byNewest);
   const restOthers = others.filter((video) => !used.has(video.id) && !interest.finished.has(video.id)).sort(byNewest);
-  return [opener, ...next, ...restFollowed, ...restOthers];
+  return [opener, ...lead, ...next, ...restFollowed, ...restOthers];
 }

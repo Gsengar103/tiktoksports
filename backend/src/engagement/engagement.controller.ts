@@ -138,11 +138,13 @@ export class EngagementController {
     if (id === user.id) throw new BadRequestException("You cannot follow yourself");
     const target = await this.prisma.user.findUnique({ where: { id } });
     if (!target) throw new BadRequestException("User not found");
-    await this.prisma.follow.upsert({
-      where: { followerId_followeeId: { followerId: user.id, followeeId: id } },
-      create: { followerId: user.id, followeeId: id },
-      update: {},
-    });
+    const where = { followerId_followeeId: { followerId: user.id, followeeId: id } };
+    const existing = await this.prisma.follow.findUnique({ where });
+    if (existing) {
+      await this.prisma.follow.delete({ where });
+      return { following: false };
+    }
+    await this.prisma.follow.create({ data: { followerId: user.id, followeeId: id } });
     return { following: true };
   }
 
