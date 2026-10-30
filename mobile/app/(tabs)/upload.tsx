@@ -7,6 +7,8 @@ import { putFile } from "../../src/lib/put-file";
 import { useSession } from "../../src/lib/session";
 import { makeThumbnails } from "../../src/lib/thumbnail";
 
+const debug = process.env.EXPO_PUBLIC_DEBUG === "1";
+
 type Issued = { role: string; key: string; url: string };
 type LogLine = { at: string; message: string };
 
@@ -30,10 +32,12 @@ export default function UploadScreen() {
   const [typeId, setTypeId] = useState<string | null>(null);
   const [levelId, setLevelId] = useState<string | null>(null);
   const [log, setLog] = useState<LogLine[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function note(message: string) {
+    if (!debug) return;
     const line = { at: clock(), message };
     console.log(`[upload ${line.at}] ${message}`);
     setLog((lines) => [...lines, line]);
@@ -55,6 +59,7 @@ export default function UploadScreen() {
     if (!token || !sportId || !typeId || !levelId) return;
     setBusy(true);
     setError(null);
+    setStatus(null);
     setLog([]);
     try {
       note("Asking for the photo library");
@@ -132,8 +137,10 @@ export default function UploadScreen() {
       setCaption("");
       if (finished.queued) {
         note(`Finished. Status ${finished.status}. Checks are queued.`);
+        setStatus("Posted. It will show in the feed after a quick check.");
       } else {
         note(`Files are saved as ${finished.status}. The check queue did not start, so this video will not go live yet.`);
+        setStatus("Saved. It will not go live until checks can run.");
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
@@ -146,15 +153,18 @@ export default function UploadScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <ScreenTitle kicker="DROP A CLIP" title="Post" subtitle="Pick an mp4. Each step shows up below." />
-      <ScrollView style={styles.log} nestedScrollEnabled>
-        {log.length === 0 ? <Text style={styles.logLine}>Choose an mp4. Each step is listed here.</Text> : null}
-        {log.map((line, index) => (
-          <Text key={`${line.at}-${index}`} style={styles.logLine}>
-            {line.at}  {line.message}
-          </Text>
-        ))}
-      </ScrollView>
+      <ScreenTitle kicker="DROP A CLIP" title="Post" subtitle="Pick an mp4." />
+      {debug ? (
+        <ScrollView style={styles.log} nestedScrollEnabled>
+          {log.length === 0 ? <Text style={styles.logLine}>Upload steps show here while debug mode is on.</Text> : null}
+          {log.map((line, index) => (
+            <Text key={`${line.at}-${index}`} style={styles.logLine}>
+              {line.at}  {line.message}
+            </Text>
+          ))}
+        </ScrollView>
+      ) : null}
+      {status ? <Text style={styles.status}>{status}</Text> : null}
       <Field label="Caption" value={caption} onChangeText={setCaption} placeholder="What is happening?" />
       <Text style={styles.heading}>Sport</Text>
       <Choices items={taxonomy?.sports ?? []} selected={sportId} onSelect={setSportId} />
@@ -197,6 +207,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.bg, padding: 20, paddingTop: 64, paddingBottom: 110, gap: 14 },
   log: { backgroundColor: colors.card, borderRadius: 18, padding: 14, gap: 6, maxHeight: 220 },
   logLine: { color: colors.muted, fontSize: 13 },
+  status: { color: colors.text, fontSize: 15, fontWeight: "700" },
   heading: { color: colors.text, fontWeight: "800", marginTop: 6, letterSpacing: -0.2 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });
