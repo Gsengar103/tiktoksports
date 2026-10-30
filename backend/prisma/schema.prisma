@@ -31,6 +31,27 @@ enum Goal {
   PLAY_MORE
 }
 
+enum PlayFrequency {
+  WATCH_ONLY
+  CASUAL
+  WEEKLY
+  MOST_DAYS
+  COMPETITIVE
+}
+
+enum ProfileKind {
+  PLAYER
+  COACH
+  ACADEMY
+}
+
+enum ProfilePhotoRole {
+  LOGO
+  COVER
+  PORTRAIT
+  GALLERY
+}
+
 enum SportRelation {
   FOLLOWS
   PLAYS
@@ -69,8 +90,11 @@ enum CaseAction {
 
 model User {
   id            String         @id @default(cuid())
-  email         String         @unique
-  passwordHash  String
+  email         String?        @unique
+  passwordHash  String?
+  phone         String?        @unique
+  googleSub     String?        @unique
+  facebookId    String?        @unique
   displayName   String
   dateOfBirth   DateTime
   ageBand       AgeBand
@@ -91,6 +115,7 @@ model User {
   blocksGot     Block[]        @relation("blocked")
   decisions     ModerationCase[] @relation("reviewer")
   audits        AuditEntry[]
+  watches       VideoWatch[]
 }
 
 model RefreshToken {
@@ -103,12 +128,29 @@ model RefreshToken {
 }
 
 model Profile {
-  userId      String         @id
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  city        String?
-  cityVisible Boolean        @default(false)
-  goal        Goal           @default(WATCH)
-  sports      ProfileSport[]
+  userId          String           @id
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind            ProfileKind      @default(PLAYER)
+  city            String?
+  area            String?
+  cityVisible     Boolean          @default(false)
+  goal            Goal             @default(WATCH)
+  playFrequency   PlayFrequency    @default(WATCH_ONLY)
+  aboutPlay       String?
+  academyName     String?
+  linkUrl         String?
+  groundName      String?
+  establishedYear Int?
+  trialNote       String?
+  coachesWhat     String?
+  qualification   String?
+  yearsCoaching   Int?
+  achievements    String?
+  about           String?
+  ageGroups       String[]         @default([])
+  batches         String[]         @default([])
+  sports          ProfileSport[]
+  photos          ProfilePhoto[]
 }
 
 model Sport {
@@ -129,6 +171,18 @@ model Level {
   id     String  @id
   name   String
   videos Video[]
+}
+
+model ProfilePhoto {
+  id          String           @id @default(cuid())
+  profileId   String
+  profile     Profile          @relation(fields: [profileId], references: [userId], onDelete: Cascade)
+  role        ProfilePhotoRole
+  objectKey   String
+  contentType String
+  createdAt   DateTime         @default(now())
+
+  @@index([profileId, role])
 }
 
 model ProfileSport {
@@ -167,6 +221,7 @@ model Video {
   reports       Report[]
   cases         ModerationCase[]
   viewDays      VideoViewDaily[]
+  watches       VideoWatch[]
 }
 
 model MediaAsset {
@@ -198,6 +253,22 @@ model VideoViewDaily {
   video   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@id([videoId, day, ageBand])
+}
+
+model VideoWatch {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId         String
+  video           Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  ageBand         AgeBand
+  videoDurationMs Int
+  durationMs      Int      @default(0)
+  startedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([videoId, startedAt])
 }
 
 model Like {

@@ -27,6 +27,9 @@ export class AccountController {
           email: `deleted+${user.id}@invalid.local`,
           displayName: "Deleted",
           passwordHash: randomBytes(16).toString("hex"),
+          phone: null,
+          googleSub: null,
+          facebookId: null,
         },
       }),
     ]);

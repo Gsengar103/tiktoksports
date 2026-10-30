@@ -3,7 +3,7 @@ import { AgeBand, StaffRole } from "@prisma/client";
 
 export type AuthUser = {
   id: string;
-  email: string;
+  email: string | null;
   displayName: string;
   ageBand: AgeBand;
   role: StaffRole;

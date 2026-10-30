@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const emptyToUndefined = z
+  .string()
+  .optional()
+  .transform((value) => {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+  });
+
 const boolFromEnv = z
   .union([z.boolean(), z.string()])
   .optional()
@@ -30,6 +38,12 @@ export const envSchema = z
     FRAME_MATCHER: z.enum(["stub"]).default("stub"),
     AUTO_APPROVE: boolFromEnv,
     CORS_ORIGIN: z.string().default("*"),
+    GOOGLE_CLIENT_ID: emptyToUndefined,
+    FACEBOOK_APP_ID: emptyToUndefined,
+    FACEBOOK_APP_SECRET: emptyToUndefined,
+    TWILIO_ACCOUNT_SID: emptyToUndefined,
+    TWILIO_AUTH_TOKEN: emptyToUndefined,
+    TWILIO_FROM: emptyToUndefined,
   })
   .superRefine((value, ctx) => {
     if (value.STORAGE !== "s3") return;

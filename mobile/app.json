@@ -32,7 +32,8 @@
           "photosPermission": "Allow access to choose a sports video to upload.",
           "cameraPermission": "Allow the camera to record a sports video."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

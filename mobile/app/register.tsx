@@ -1,6 +1,7 @@
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
+import { OtherSignIn } from "../src/components/other-sign-in";
 import { Button, colors, ErrorText, Field } from "../src/components/ui";
 import { useSession } from "../src/lib/session";
 
@@ -32,7 +33,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Create account</Text>
       <Text style={styles.subtitle}>You need to be 13 or older. Use YYYY-MM-DD for the date of birth.</Text>
       <Field label="Name" value={displayName} onChangeText={setDisplayName} autoCapitalize="words" />
@@ -41,15 +42,16 @@ export default function RegisterScreen() {
       <Field label="Date of birth" value={dateOfBirth} onChangeText={setDateOfBirth} placeholder="2000-01-15" />
       <ErrorText message={error} />
       <Button label={busy ? "Creating" : "Continue"} onPress={submit} disabled={busy} />
+      <OtherSignIn />
       <Link href="/login" style={styles.link}>
         I already have an account
       </Link>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
+  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   subtitle: { color: colors.muted, fontSize: 15 },
   link: { color: colors.accent, textAlign: "center", fontSize: 15 },

@@ -1,6 +1,7 @@
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
+import { OtherSignIn } from "../src/components/other-sign-in";
 import { Button, colors, ErrorText, Field } from "../src/components/ui";
 import { useSession } from "../src/lib/session";
 
@@ -25,22 +26,23 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Sports</Text>
       <Text style={styles.subtitle}>Short videos for the sport you actually play.</Text>
       <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@email.com" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry />
       <ErrorText message={error} />
       <Button label={busy ? "Signing in" : "Sign in"} onPress={submit} disabled={busy} />
+      <OtherSignIn />
       <Link href="/register" style={styles.link}>
         Create an account
       </Link>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
+  screen: { flexGrow: 1, backgroundColor: colors.bg, padding: 24, justifyContent: "center", gap: 14 },
   title: { color: colors.text, fontSize: 32, fontWeight: "700" },
   subtitle: { color: colors.muted, fontSize: 16, marginBottom: 8 },
   link: { color: colors.accent, textAlign: "center", fontSize: 15 },

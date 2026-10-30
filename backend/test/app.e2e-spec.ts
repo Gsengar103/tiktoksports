@@ -82,8 +82,13 @@ describe("API", () => {
       .put("/v1/me/profile")
       .set("authorization", `Bearer ${adultToken}`)
       .send({
+        kind: "PLAYER",
+        city: "Bengaluru",
         cityVisible: false,
         goal: "PLAY_MORE",
+        playFrequency: "WEEKLY",
+        ageGroups: [],
+        batches: [],
         sports: [{ sportId: "sport.cricket", relation: "FOLLOWS", levelId: "level.beginner" }],
       })
       .expect(200);

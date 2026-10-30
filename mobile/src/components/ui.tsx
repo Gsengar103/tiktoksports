@@ -17,13 +17,15 @@ export function Field({
   secureTextEntry,
   placeholder,
   autoCapitalize = "none",
+  keyboardType = "default",
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   secureTextEntry?: boolean;
   placeholder?: string;
-  autoCapitalize?: "none" | "words";
+  autoCapitalize?: "none" | "words" | "sentences";
+  keyboardType?: "default" | "phone-pad" | "number-pad";
 }) {
   return (
     <View style={styles.field}>
@@ -36,6 +38,7 @@ export function Field({
         placeholderTextColor={colors.muted}
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
+        keyboardType={keyboardType}
         style={styles.input}
       />
     </View>

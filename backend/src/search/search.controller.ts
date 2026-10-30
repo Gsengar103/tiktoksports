@@ -3,6 +3,8 @@ import { VideoStatus } from "@prisma/client";
 import { IsOptional, IsString, MinLength } from "class-validator";
 import { AuthUser, CurrentUser } from "../auth/current-user";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { interestScore, loadInterest } from "../common/interest";
+import { NEXT_REACTION_SLOTS } from "../common/rank";
 import { PrismaService } from "../prisma/prisma.service";
 
 class RelatedQuery {
@@ -73,8 +75,22 @@ export class SearchController {
         creator: { select: { id: true, displayName: true } },
       },
     });
-    const ranked = [...candidates].sort((left, right) => similarity(source, right) - similarity(source, left) || right.createdAt.getTime() - left.createdAt.getTime());
-    return { videos: ranked.slice(0, 20).map(toCard) };
+    const interest = await loadInterest(this.prisma, user.id);
+    const ranked = [...candidates].sort(
+      (left, right) => similarity(source, right) - similarity(source, left) || right.createdAt.getTime() - left.createdAt.getTime(),
+    );
+    const pool = ranked.filter((video) => !interest.finished.has(video.id));
+    const head = pool.slice(0, Math.max(NEXT_REACTION_SLOTS, 8));
+    const next = [...head]
+      .sort(
+        (left, right) =>
+          interestScore(interest, right) + similarity(source, right) - (interestScore(interest, left) + similarity(source, left)) ||
+          right.createdAt.getTime() - left.createdAt.getTime(),
+      )
+      .slice(0, NEXT_REACTION_SLOTS);
+    const nextIds = new Set(next.map((video) => video.id));
+    const ordered = [...next, ...pool.filter((video) => !nextIds.has(video.id))].slice(0, 20);
+    return { videos: ordered.map(toCard) };
   }
 }
 

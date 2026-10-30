@@ -1,11 +1,11 @@
 import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useState } from "react";
-import { Dimensions, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Dimensions, FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { api, FeedVideo, PublicVideo } from "../lib/api";
+import { Reactions } from "./reactions";
+import { usePlayedDuration, useWatchReport } from "../lib/watch-report";
 import { colors } from "./ui";
-
-const seenViews = new Set<string>();
 
 export function WatchSession({
   videos,
@@ -74,10 +74,7 @@ function WatchPage({
   more: boolean;
 }) {
   const [playback, setPlayback] = useState<string | null>(null);
-  const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(item.counts?.likes ?? 0);
-  const [draft, setDraft] = useState("");
-  const [note, setNote] = useState<string | null>(null);
+  const reportDuration = useWatchReport(item.id, token, active);
 
   useEffect(() => {
     if (!active || !token) return;
@@ -90,69 +87,29 @@ function WatchPage({
       .catch(() => {
         if (!cancelled) setPlayback(null);
       });
-    if (!seenViews.has(item.id)) {
-      seenViews.add(item.id);
-      void api(`/v1/videos/${item.id}/views`, { token }).catch(() => {
-        seenViews.delete(item.id);
-      });
-    }
     return () => {
       cancelled = true;
     };
   }, [active, item.id, token]);
 
-  async function like() {
-    if (!token) return;
-    try {
-      const result = await api<{ liked: boolean }>(`/v1/videos/${item.id}/likes`, { token });
-      setLiked(result.liked);
-      setLikes((count) => count + (result.liked ? 1 : -1));
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : "Could not like this video");
-    }
-  }
-
-  async function comment() {
-    const body = draft.trim();
-    if (!token || !body) return;
-    try {
-      await api(`/v1/videos/${item.id}/comments`, { token, body: { body } });
-      setDraft("");
-      setNote("Comment sent");
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : "Could not send the comment");
-    }
-  }
-
   return (
-    <View style={[styles.page, { height }]}>
-      {active && playback ? <Player url={playback} /> : <View style={styles.poster} />}
-      <View style={styles.meta}>
-        <Text style={styles.creator}>{item.creator.displayName}</Text>
-        <Text style={styles.caption}>{item.caption || "Untitled"}</Text>
-        <Text style={styles.tags}>
-          {item.sportId.replace("sport.", "")} · {item.levelId.replace("level.", "")}
-        </Text>
-        <Text style={styles.tags}>{more ? "Swipe up for a similar video" : "That's the last similar video"}</Text>
-        <View style={styles.commentRow}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Comment"
-            placeholderTextColor={colors.muted}
-            style={styles.commentInput}
-          />
-          <Pressable onPress={() => void comment()}>
-            <Text style={styles.send}>Send</Text>
-          </Pressable>
+    <Reactions videoId={item.id} token={token} active={active} initialLikes={item.counts?.likes ?? 0} initialLiked={item.liked}>
+      {(bar, like) => (
+        <View style={[styles.page, { height }]}>
+          {active && playback ? <Player url={playback} onWatch={reportDuration} /> : <View style={styles.poster} />}
+          <View style={styles.meta}>
+            <Text style={styles.creator}>{item.creator.displayName}</Text>
+            <Text style={styles.caption}>{item.caption || "Untitled"}</Text>
+            <Text style={styles.tags}>
+              {item.sportId.replace("sport.", "")} · {item.levelId.replace("level.", "")}
+            </Text>
+            <Text style={styles.tags}>{more ? "Swipe up for a similar video" : "That's the last similar video"}</Text>
+            {bar}
+          </View>
+          {like}
         </View>
-        {note ? <Text style={styles.note}>{note}</Text> : null}
-      </View>
-      <Pressable onPress={() => void like()} style={styles.like}>
-        <Text style={styles.likeText}>{liked ? "Liked" : "Like"}</Text>
-        <Text style={styles.likeCount}>{likes}</Text>
-      </Pressable>
-    </View>
+      )}
+    </Reactions>
   );
 }
 
@@ -165,7 +122,7 @@ function playableAsset(assets: { role: string; url: string }[]) {
   return assets.find((asset) => asset.role === "PROGRESSIVE") ?? assets.find((asset) => asset.role === "PREVIEW");
 }
 
-function Player({ url }: { url: string }) {
+function Player({ url, onWatch }: { url: string; onWatch: (durationMs: number) => void }) {
   const [failed, setFailed] = useState(false);
   const [audible, setAudible] = useState(Platform.OS !== "web");
   const [space, setSpace] = useState({ width: 0, height: 0 });
@@ -184,6 +141,8 @@ function Player({ url }: { url: string }) {
     const size = videoTrack?.size;
     if (size?.width && size?.height) setFrame({ width: size.width, height: size.height });
   });
+
+  usePlayedDuration(player, onWatch);
 
   useEffect(() => {
     // play() during setup runs before the video element exists, so the first frame stays frozen.

@@ -1,0 +1,6 @@
+CREATE TYPE "PlayFrequency" AS ENUM ('WATCH_ONLY', 'CASUAL', 'WEEKLY', 'MOST_DAYS', 'COMPETITIVE');
+
+ALTER TABLE "Profile" ADD COLUMN "area" TEXT;
+ALTER TABLE "Profile" ADD COLUMN "playFrequency" "PlayFrequency" NOT NULL DEFAULT 'WATCH_ONLY';
+ALTER TABLE "Profile" ADD COLUMN "aboutPlay" TEXT;
+ALTER TABLE "Profile" ADD COLUMN "academyName" TEXT;

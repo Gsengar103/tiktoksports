@@ -1,8 +1,9 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ProfileForm } from "../../src/components/profile-form";
 import { Button, colors } from "../../src/components/ui";
-import { api } from "../../src/lib/api";
+import { api, Profile, Taxonomy } from "../../src/lib/api";
 import { useSession } from "../../src/lib/session";
 
 type LibraryVideo = {
@@ -32,12 +33,30 @@ const AGE_LABEL: Record<string, string> = {
   AGE_18_PLUS: "18+",
 };
 
+const KIND_LABEL: Record<Profile["kind"], string> = {
+  PLAYER: "Player",
+  COACH: "Coach",
+  ACADEMY: "Academy",
+};
+
+const BATCH_LABEL: Record<string, string> = {
+  MORNING: "Morning",
+  EVENING: "Evening",
+  WEEKEND: "Weekend",
+};
+
 export default function ProfileScreen() {
-  const { me, token, signOut } = useSession();
+  const { me, token, signOut, saveProfile, refreshMe } = useSession();
   const [videos, setVideos] = useState<LibraryVideo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [taxonomy, setTaxonomy] = useState<Taxonomy | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    api<Taxonomy>("/v1/taxonomy", { token }).then(setTaxonomy).catch(() => undefined);
+  }, [token]);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -70,24 +89,9 @@ export default function ProfileScreen() {
 
   const views = videos.reduce((sum, video) => sum + video.views, 0);
   const likes = videos.reduce((sum, video) => sum + video.counts.likes, 0);
-  const initial = (me?.displayName ?? "?").slice(0, 1).toUpperCase();
-  const sports = me?.profile?.sports.map((sport) => sport.sportId.replace("sport.", "")).join(" · ");
-
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
-        <View style={styles.identity}>
-          <Text style={styles.title}>{me?.displayName}</Text>
-          <Text style={styles.meta}>{me?.email}</Text>
-          <Text style={styles.meta}>
-            {AGE_LABEL[me?.ageBand ?? ""] ?? me?.ageBand} · {labelGoal(me?.profile?.goal)}
-          </Text>
-          {sports ? <Text style={styles.meta}>{sports}</Text> : null}
-        </View>
-      </View>
+      {me?.profile ? <ProfileCard name={me.displayName} email={me.email} ageBand={me.ageBand} profile={me.profile} /> : null}
 
       <View style={styles.stats}>
         <Stat label="Videos" value={String(videos.length)} />
@@ -96,6 +100,16 @@ export default function ProfileScreen() {
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Text style={styles.heading}>Edit profile</Text>
+      <ProfileForm
+        token={token}
+        taxonomy={taxonomy}
+        profile={me?.profile ?? null}
+        submitLabel="Save profile"
+        onSubmit={saveProfile}
+        onChanged={refreshMe}
+      />
 
       <Text style={styles.heading}>Your videos</Text>
       {videos.length === 0 ? <Text style={styles.meta}>Uploads show here, including ones still being checked.</Text> : null}
@@ -169,6 +183,69 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ProfileCard({ name, email, ageBand, profile }: { name: string; email: string | null; ageBand: string; profile: Profile }) {
+  const portrait = profile.photos.find((photo) => photo.role === "PORTRAIT" || photo.role === "LOGO");
+  const cover = profile.photos.find((photo) => photo.role === "COVER");
+  const gallery = profile.photos.filter((photo) => photo.role === "GALLERY");
+  const title = profile.kind === "ACADEMY" && profile.academyName ? profile.academyName : name;
+  const sport = profile.sports.find((item) => item.relation === "FOLLOWS");
+  const place = [profile.area, profile.city, profile.groundName].filter(Boolean).join(", ");
+  const ages = profile.ageGroups.map((group) => AGE_LABEL[group] ?? group).join(" · ");
+  const batches = profile.batches.map((batch) => BATCH_LABEL[batch] ?? batch).join(" · ");
+  const initial = title.slice(0, 1).toUpperCase();
+  return (
+    <View style={styles.cardBlock}>
+      {cover ? <Image source={{ uri: cover.url }} style={styles.cover} /> : null}
+      <View style={styles.header}>
+        {portrait ? (
+          <Image source={{ uri: portrait.url }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+        )}
+        <View style={styles.identity}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.meta}>{KIND_LABEL[profile.kind]}{sport ? ` · ${sport.sportId.replace("sport.", "")}` : ""}</Text>
+          {profile.kind === "ACADEMY" ? <Text style={styles.meta}>{name}</Text> : null}
+          {email ? <Text style={styles.meta}>{email}</Text> : null}
+          {place ? (
+            <Text style={styles.meta}>
+              {place}
+              {profile.cityVisible ? "" : " · private"}
+            </Text>
+          ) : null}
+          {profile.kind === "PLAYER" ? <Text style={styles.meta}>{labelGoal(profile.goal)}</Text> : null}
+          {profile.kind === "COACH" && profile.academyName ? <Text style={styles.meta}>{profile.academyName}</Text> : null}
+          {profile.yearsCoaching != null ? <Text style={styles.meta}>{profile.yearsCoaching} years coaching</Text> : null}
+          {profile.qualification ? <Text style={styles.meta}>{profile.qualification}</Text> : null}
+          {profile.establishedYear ? <Text style={styles.meta}>Started {profile.establishedYear}</Text> : null}
+          {ages ? <Text style={styles.meta}>Ages {ages}</Text> : null}
+          {batches ? <Text style={styles.meta}>{batches}</Text> : null}
+          {profile.about ? <Text style={styles.meta}>{profile.about}</Text> : null}
+          {profile.aboutPlay ? <Text style={styles.meta}>{profile.aboutPlay}</Text> : null}
+          {profile.coachesWhat ? <Text style={styles.meta}>Coaches {profile.coachesWhat}</Text> : null}
+          {profile.achievements ? <Text style={styles.meta}>{profile.achievements}</Text> : null}
+          {profile.trialNote ? <Text style={styles.meta}>{profile.trialNote}</Text> : null}
+          {profile.linkUrl ? (
+            <Pressable onPress={() => void Linking.openURL(profile.linkUrl!)}>
+              <Text style={styles.link}>{profile.kind === "ACADEMY" ? "Visit academy" : "Visit coach"}</Text>
+            </Pressable>
+          ) : null}
+          {ageBand ? <Text style={styles.meta}>{AGE_LABEL[ageBand] ?? ageBand}</Text> : null}
+        </View>
+      </View>
+      {gallery.length > 0 ? (
+        <View style={styles.gallery}>
+          {gallery.map((photo) => (
+            <Image key={photo.id} source={{ uri: photo.url }} style={styles.galleryImage} />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function labelGoal(goal: string | undefined): string {
   if (goal === "PLAY_MORE") return "Play more";
   if (goal === "LEARN") return "Learn";
@@ -197,8 +274,14 @@ async function removeAccount(token: string | null, signOut: () => Promise<void>)
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.bg, padding: 20, paddingTop: 64, gap: 14, paddingBottom: 40 },
+  cardBlock: { gap: 12 },
+  cover: { width: "100%", height: 160, borderRadius: 16, backgroundColor: "#111" },
   header: { flexDirection: "row", gap: 14, alignItems: "center" },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  avatarImage: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#111" },
+  gallery: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  galleryImage: { width: 96, height: 96, borderRadius: 10, backgroundColor: "#111" },
+  link: { color: colors.accent, fontSize: 15, fontWeight: "700", marginTop: 4 },
   avatarText: { color: "#111", fontSize: 28, fontWeight: "700" },
   identity: { flex: 1, gap: 2 },
   title: { color: colors.text, fontSize: 26, fontWeight: "700" },
@@ -207,6 +290,11 @@ const styles = StyleSheet.create({
   stat: { flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 12, gap: 2 },
   statValue: { color: colors.text, fontSize: 22, fontWeight: "700" },
   heading: { color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 8 },
+  wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  choice: { borderWidth: 1, borderColor: colors.line, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  choiceOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  choiceText: { color: colors.text },
+  choiceTextOn: { color: "#111", fontWeight: "700" },
   subhead: { color: colors.text, fontSize: 15, fontWeight: "600", marginTop: 8 },
   card: { flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: colors.card, borderRadius: 14, padding: 10 },
   cardOn: { borderWidth: 1, borderColor: colors.accent },

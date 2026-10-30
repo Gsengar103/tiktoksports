@@ -7,7 +7,7 @@ import { Env } from "../config/env";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthUser } from "./current-user";
 
-type Payload = { sub: string; email: string; ageBand: AuthUser["ageBand"]; role: StaffRole };
+type Payload = { sub: string; email: string | null; ageBand: AuthUser["ageBand"]; role: StaffRole };
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

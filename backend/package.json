@@ -1,7 +1,7 @@
 {
   "name": "tiktoksports-backend",
   "version": "0.1.0",
-  "private": true,
+  "private": "true",
   "description": "Control-plane API for the sports short-video app",
   "scripts": {
     "build": "nest build",
@@ -27,13 +27,13 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "testEnvironment": "node",
-    "setupFiles": ["<rootDir>/test-setup.ts"]
+    "setupFiles": [
+      "<rootDir>/test-setup.ts"
+    ]
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "Control-plane API for the sports short-video app",
-  "private": "true",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1152.0",
     "@aws-sdk/s3-request-presigner": "^3.1152.0",
@@ -50,6 +50,7 @@
     "bullmq": "^6.3.17",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "google-auth-library": "^11.3.1",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
     "passport": "^0.7.0",
